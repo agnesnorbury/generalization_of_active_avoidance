@@ -1,0 +1,1135 @@
+<!doctype html>
+
+<html>
+
+    <head>
+        <title>Psychology experiment</title>
+      
+        <script src="/static/js/jspsych/jquery.min.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/jquery-ui.min.js" type="text/javascript"></script>        
+        <script src="/static/js/jspsych/jspsych.js" type="text/javascript"></script> 
+
+        <script src="/static/lib/underscore-min.js" type="text/javascript"></script>
+        <script src="/static/lib/backbone-min.js" type="text/javascript"></script>
+
+        <script src="/static/js/jspsych/plugins/jspsych-text.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-single-stim.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-instructions.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-multi-stim-multi-response.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-multi-choice.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-text.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-likert.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-rating.js" type="text/javascript"></script>
+
+        <script type="text/javascript">
+            // These fields provided by the psiTurk Server
+            var uniqueId = "{{ uniqueId }}"; 
+            var adServerLoc = "{{ adServerLoc }}"; 
+            var mode = "{{ mode }}"; 
+        </script>
+
+        <!--  basic psiturk functionality -->
+        <script src="/static/js/utils.js" type="text/javascript"></script>
+        <script src="/static/js/psiturk.js" type="text/javascript"></script> 
+
+        <link href="/static/js/jspsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+        <link href="/static/js/jspsych/css/jquery-ui.min.css" rel="stylesheet" type="text/css"></link>
+
+        <style>
+          img {
+              width: 900px; 
+            }
+        </style>
+
+    </head>
+
+    <body>
+        <div id="jspsych-target"></div>
+    </body>
+
+    <script>
+
+  /*****************************check browser compatibility***************************************************  
+    getBrowserInfo : function(){
+          var ua=navigator.userAgent,tem,M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+          if(/trident/i.test(M[1])){
+              tem=/\brv[ :]+(\d+)/g.exec(ua) || [];
+              return {name:'IE',version:(tem[1]||'')};
+              }
+          if(M[1]==='Chrome'){
+              tem=ua.match(/\bOPR\/(\d+)/)
+              if(tem!=null)   {return {name:'Opera', version:tem[1]};}
+              }
+          M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
+          if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
+          return {
+            name: M[0],
+            version: M[1]
+          }
+        };
+    
+    checkBrowser : function(){
+          var b = Experiment.utils.getBrowserInfo();
+          var acceptedBrowsers = {
+            'Firefox': 43,
+            'Chrome': 45,
+            'Safari': 8
+          };
+          if(Object.keys(acceptedBrowsers).indexOf(b.name) == -1){
+            $('body').html('<h4>You must either use Chrome, Firefox or Safari to take part in this experiment.</h4>');
+            console.log(b);
+            throw new Error('Experiment aborted due to invalid browser.');
+          }else if(b.version < acceptedBrowsers[b.name]){
+            $('body').html('<h4>The browser version is too outdated for this experiment. Please update your browser and try again.</h4>');
+            console.log(b);
+            throw new Error('Experiment aborted due to unaccepted browser.');
+          }
+        }; */
+
+  /*****************************generate SN and condition*********************************************/  
+  // for random selection of axis randomisation condition (direction of 'spikiness' axis)
+  var cond= jsPsych.randomization.sample(["1", "2"],1)[0];
+
+  //store in data
+  jsPsych.data.addProperties({
+    condition: cond
+  });
+
+  /******************************************load psiturk*********************************************/ 
+  var psiturk = new PsiTurk(uniqueId, adServerLoc, mode);   //creates object 'psiturk' client side for data storage
+
+ /********************************check /collect demographic info*************************************/
+  var demogs1 = {
+    type: "survey-text",
+    questions: ["Please enter you age in years:"],
+    on_finish:  function() {
+        jsPsych.data.addDataToLastTrial({phase:"demog"});
+	psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+        var answer=jsPsych.data.getLastTrialData();
+        if (JSON.parse(answer.responses).Q0<18) {
+          jsPsych.endExperiment("<p>Sorry, only people aged 18 or older can take part in this study.</p>"+
+                                "<p>Please release the HIT so that someone else can take part.</p>")
+          }                   
+        },
+    required: true
+  };
+
+  var demogs2 = {
+    type: "survey-multi-choice",
+    preamble: [],
+    questions: ["Please select which gender you identify as: "],
+    options: [["Female", "Male", "Other", "Prefer not to say"]],
+    required: true,
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"demog"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+    }
+  };
+ 
+/********************************define instructions block*********************************************/
+ 	var instructions_block ={
+ 		type: "instructions",  //nb edited jpsych-instructions to make buttons and not arrows key nav default
+ 		pages: [
+      //pg1//
+      "<p><strong>Experiment Instructions</strong></p>"+
+
+      "<p>In the main part of the experiment, you will a series of shapes on your screen. </p>" +
+
+      "<p>The shapes can vary in how 'spiky' they look. </p>" +
+
+      "<div style='width:600px;'>"+
+      "<div style='float:left;text-align:center;'> <img src='/static/img/notSpiky.png' style='width:300px;'></img>" +
+      "<p class='small'><strong>more spiky</strong></p></div>" +
+      "<div style='float:right;text-align:center;'> <img src='/static/img/spiky.png' style='width:300px;'></img>" +
+      "<p class='small'><strong>less spiky</strong></p></div>"+
+      "<div style='clear:both'> </div>"+
+
+      "<p>At the start of the experiment, you will be given a certain amount of money ($6.00). Your aim is " +
+      "to keep as much of this money as possible as you go through the task. </p>" +
+
+      "<p><strong>Any money you still have at the end of the task will added to your payment as a bonus.</strong> </p>"+
+      "<p> </p>",
+
+      //pg2//
+      "<p>Some of the shapes you will see are <strong>safe</strong>, " +
+      "and some of the shapes are <strong>dangerous</strong>.</p>" +
+
+      "<p>What this means is, if you see a <strong>safe</strong> shape on the screen and <strong>do nothing</strong>, " +
+      "you will not lose any money.</p>" +
+
+      "<p>But if you see a <strong>dangerous</strong> shape on the screen and <strong>do nothing</strong>, " +
+      "there is a <strong>strong chance</strong> that you will <strong>lose money</strong> (10 cents).</p>" +
+      
+      "<div class='center-content'><img src='/static/img/instr_loseDime.png' style='width:300px;'></img></div>"+
+      "<p> </p>",
+
+      //pg3//
+      "<p>There is something you can do to <strong>avoid losing</strong> if you see a dangerous shape.</p>" +
+
+      "<p>If you press the <strong>'X' key</strong> on your keyboard, then you will not lose any money on that go.</p>" +
+
+      "<div class='center-content'><img src='/static/img/instr_pressX.png' style='width:300px;'></img></div>" +
+
+      "<p>However, the twist is that there is a <strong>small cost</strong> to pressing the 'escape' (X) key. " +
+      "Every time you press the 'X' key, it will be counted on a counter at the bottom of " +
+      "your screen.</p>" +
+
+      "<p>At the end of each 'block' of the experiment, you will lose a little extra money depending " +
+      "on how many times you have pressed the key. This works out as roughly <strong>10 cents</strong> for every " +
+      "<strong>five times</strong> you pressed the key. For example, if you pressed the key 25 times in one block, " +
+      "you would lose an extra 50 cents at the end of that block.</p>" +
+
+      "<p>This means that in order to keep as much money as possible, the best strategy is to " +
+      "<strong>press</strong> the 'X' key if you think it is a <strong>dangerous</strong> shape," +
+      " but <strong>not press</strong> it if you think it is a <strong>safe</strong> shape.</p>" +
+      "<p> </p>",
+
+      //pg4//
+      "<p>At the start of every go, you will see a single shape in the centre of your screen.</p>" +
+
+      "<p>The shape will stay on the screen for around 3 seconds, during which time you have to " +
+      "decide whether or not you want to press the 'X' key.</p>" +
+
+      "<p>After this time is up, you will find out whether you lost money or not on that go:</p>" +
+
+      "<div style='width:650px;margin:auto;'>"+
+      "<div style='float:left;'><img src='/static/img/instr_loseDime.png' style='width:300px;'></img>" +
+      "<p class='small'><strong>You lose 10 cents!</strong></p></div>" +
+      "<div style='float:right;'><img src='/static/img/instr_noLoss.png' style='width:300px;'></img>" +
+      "<p class='small'><strong>You didn't lose anything this go.</strong></p></div>"+
+      "<div style='clear:both;'></div>",
+
+      //pg5//
+      "<p>For example, in one go, you might see particular shape on your screen the screen.</p>" +
+      "<p>You decide not to press the 'X' key, but at the end of the go lose 10 cents.</p>" +
+
+      "<div class='center-content'><img src='/static/img/instr1.png' style='width:500px;'></img></div>",
+
+      //pg6//
+      "<p>Next time you see that shape, you remember it was a 'dangerous' shape, " +
+      "and therefore decide to press the 'X' key.</p>" +
+
+      "<p>This means that your counter will go up by 1, but that you won't lose anything on that go.</p>" +
+
+      "<div class='center-content'><img src='/static/img/instr2.png' style='width:500px;'></img></div>"+
+      "<p> </p>",
+
+      //pg7//
+      "<p>You have to learn by trial and error whether each shape is safe or dangerous.</p>" +
+      
+      "<p>At the end of each block of the experiment, the screen will display how many times you " +
+      "pressed the button during that block, and you will lose a little extra money depending on " +
+      "how many times you pressed it (roughly 10 cents per every <strong>5 presses</strong>).</p>" +
+
+      "<div class='center-content'><img src='/static/img/instr3.png' style='width:300px;'></img></div>" +
+
+      "<p>The experiment is divided up into 5 equal blocks of about 3 and half minutes each.</p>" +
+
+      "<p><strong>Which shapes are safe, and which are dangerous, stays the same the whole way " +
+      "through the experiment</strong>.</p>",
+
+      //pg8//
+      "<p>There will now be a short quiz to check you understand exactly how the experiment will work.</p>" +
+
+      "<p>Press <strong>next</strong> to continue.</p>"+
+      "<p> </p>"
+      ],
+      shock_clickable_nav: true,
+      on_finish: function() {
+        jsPsych.data.addDataToLastTrial({phase:"instr"});
+        psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      }
+ 	};
+
+/******************************define instructions comprehension test block**********************************/
+  var instr_accuracy=0;
+
+  var instructions_test_block = {  
+    type: "survey-multi-choice",    //edited plugin to remove '*' appending to req. items as=all
+    preamble: ["<p><strong>You will now be asked a few questions to check that you understood the instructions."+
+              "</strong></p>" +
+              "<p> </p>" +
+              "<p>For each statement below, please select whether you think it is <strong>true</strong> or "+
+              "<strong>false</strong>.</p>"],
+    questions: [ "1. Your aim in this experiment is to lose as much money as possible",
+      "2. If you see a safe shape, there is a chance you will lose money",
+      "3. If you see a dangerous shape, you will always lose money",
+      "4. If you see a dangerous shape and press X, you will never lose money",
+      "5. If you see a dangerous shape and do nothing, you will always lose money",
+      "6. If you see a dangerous shape and do nothing, you will lose money most of the time, but not every single time",
+      "7. Which shapes are safe and which shapes are dangerous will change across the experiment",
+      "8. At the end of each block, you will lose an extra 10 cents for every time you pressed the X key",
+      "9. At the end of each block, you will lose an extra 10 cents for roughly every 5 times you pressed the X key"
+      ],
+    options: function () {
+      var options=[];
+      var nQuest=9; 
+      for (i=0; i<nQuest; i++) {  
+          options.push(["True", "False"])
+        }
+      return options; 
+      },
+    required: [true, true, true, true, true, true, true, true, true], 
+
+    on_finish: function() {    
+      var answers = jsPsych.data.getLastTrialData(); var answers = JSON.parse(answers.responses);
+      var correct=[ "False","False","False","True","False","True","False","False","True"];
+      var nQuest=9; 
+      var correct_ans_count =0;
+        for (var i=0; i < nQuest; i++) {
+          var questID = "Q"+i;
+          var ans = answers[questID];
+          if (ans == correct[i]) {  
+            correct_ans_count++;
+            }
+        }
+      instr_accuracy = (correct_ans_count / nQuest);
+      jsPsych.data.addDataToLastTrial({phase: "instr"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      return instr_accuracy;
+      }
+  };
+
+  /*************if score not high enough re-run instructions and quiz***********/
+  var threshold =0.95;
+
+  var wrong_text ={
+    type: "text",
+    text: "<p>Sorry, you didn't get quite enough of the quiz questions right. Please " +
+          "re-read the instructions and try again.</p>" +
+          "<p>Press <strong>space bar</strong> to continue. </p>",
+    cont_key: [32],
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"instr"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+    }
+  };
+
+  var instr_if_node={
+      timeline: [wrong_text, instructions_block, instructions_test_block],
+      conditional_function: function(){
+        if (instr_accuracy<threshold) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+  };
+
+ /**********************************segway to main experiment*******************/
+  var continue_text ={
+    type: "text",
+    text: "<p>Well done!</p>" +
+          "<p> </p>" +
+          "<p>Remember, in order to keep as much money as possible during the task, " +
+          "the best strategy is to <strong>press X</strong> if you think the shape is " +
+          "<strong>dangerous</strong>, but <strong>do not press</strong> if you think the " +
+          "shape is <strong>safe</strong>.</p>" +
+          "<p>You will have to learn which shapes are safe (no chance of losing money), " +
+          "and which are dangerous (chance of losing money if you do nothing) by trial " +
+          "and error.</p>" +
+          "<p>If you lose a lot during the task, your remaining total may become negative " +    //??
+          "(a minus number). However, nothing will be be detracted from your flat rate study " +
+          "payment (you will just lose out on any extra bonus payment).</p>" +
+          "<p>Press <strong>space bar</strong> to start the experiment!</p>",
+   cont_key: [32],
+   on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"instr"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.finishInstructions();
+   }
+  };
+
+ /**********************************define test stimuli and trial blocks**************************************/
+  /********initialize stuff********/
+  var cashLeft = 6.00; 
+  var lossAmount = 0.10;
+  var pressLoss=0.02;
+
+  var youLose ={
+    type: "single-stim",
+    stimulus: "/static/img/loseDime.png",
+    prompt: function(){
+      return "<p>Current press count: "+pressCount+"</p>"+
+             "<p>Total remaining: $"+cashLeft.toFixed(2)+"</p>";
+    },
+    response_ends_trial: false,
+    timing_stim: 1500,
+    timing_response: 1500,
+    timing_post_trial: 0
+  };
+
+  var noLoss ={
+    type: "single-stim",
+    stimulus: "/static/img/noLoss.png",
+    prompt: function(){
+      return "<p>Current press count: "+pressCount+"</p>"+
+             "<p>Total remaining: $"+cashLeft.toFixed(2)+"</p>";
+    },
+    response_ends_trial: false,
+    timing_stim: 1500,
+    timing_response: 1500,
+    timing_post_trial: 0
+  };
+
+  var if_node1 ={
+      timeline: [youLose], 
+      conditional_function: function() {
+      if (outcome==-1) {
+        return true;
+      } else {
+        return false;
+        }
+      }
+    };
+
+  var if_node2 ={
+      timeline: [noLoss], 
+      conditional_function: function() {
+      if (outcome==0) {
+        return true;
+      } else {
+        return false;
+        }
+      }
+    };
+
+  var post_trial_gap = function() {
+    return Math.floor(Math.random() * 1500) + 1000;
+  };
+
+  var fixation ={
+    type: "single-stim",
+    stimulus: "/static/img/fix.png",
+    prompt: function(){
+        return "<p>Current press count: "+pressCount+"</p>"+
+                "<p>Total remaining: $"+cashLeft.toFixed(2)+"</p>";
+      },
+    response_ends_trial: false,
+    timing_response: post_trial_gap,
+    timing_post_trial: 0
+  };
+
+  var test_block_end = {
+      type: "text",
+      cont_key: [32],
+      text: function() {
+        var blockLoss= pressCount*pressLoss;   
+        cashLeft = cashLeft-blockLoss;
+        jsPsych.data.addDataToLastTrial({blockLoss: blockLoss, cashLeft: cashLeft.toFixed(2)});
+        return "<p><strong>End of block</strong>."+
+                "<p>You pressed the X key <strong>"+pressCount+" times</strong>.</p> "+
+                "<p>This means that you lose an extra <strong>$"+blockLoss.toFixed(2)+"</strong> this block.</p>"+
+                "<p>Your current total remaining is <strong>$"+cashLeft.toFixed(2)+"</strong>.</p>"+
+                "<p>Press <strong>space bar</strong> to continue.</p>";
+      },
+      on_finish: function() {         //at end of block send data to server and reset pressCount to 0 
+        psiturk.saveData();
+        pressCount=0;
+        return pressCount;
+      }
+  };
+  
+  
+  ////var tts = $.csv.toArray("gen_tts.csv"); 
+  var tts = [8,3,4,6,1,2,9,5,4,6,9,1,4,4,2,3,1,1,5,5,4,3,4,1,4,4,1,1,8,1,2,4,2,1,9,4,2,9,
+             1,2,1,3,1,4,1,1,2,1,1,7,1,2,2,1,2,1,4,8,2,2,4,2,4,4,2,4,1,4,1,4,2,2,4,4,1,1,
+             1,1,2,7,7,4,9,7,3,2,4,2,2,6,4,8,1,2,2,1,3,7,6,1,9,7,1,3,9,2,2,1,1,3,1,7,7,2,
+             5,1,4,1,4,4,1,8,1,1,5,4,4,6,1,1,2,2,2,9,4,1,4,1,9,2,1,8,2,3,4,4,4,1,2,6,2,1,
+             4,1,6,2,8,2,5,2,5,1,4,1,8,7,6,2,2,6,9,1,6,4,2,3,5,1,8,8,2,2,1,4,4,5,7,4,5,4]; //BAD FIX 
+
+  var all_trials = [];
+  for(var i=0; i < tts.length; i++) {
+      if(tts[i]==1) { all_trials[i] = {stimulus: "/static/img/"+cond+"/CSminus.png",
+      data: {CS: 4, tt: 1} }
+      }
+      if(tts[i]==2 | tts[i]==3) { all_trials[i] = {stimulus: "/static/img/"+cond+"/CSplus1.png",
+    data: {CS: 2, tt: tts[i]} }
+      }
+      if(tts[i]==4 | tts[i]==5) {all_trials[i] = {stimulus: "/static/img/"+cond+"/CSplus2.png",
+    data: {CS: 6, tt: tts[i]} }
+      }
+      if(tts[i]==6) { all_trials[i]= {stimulus: "/static/img/"+cond+"/CSplus1nTheta.png",
+    data: {CS: 1, tt: 6} }
+      }
+      if(tts[i]==7) { all_trials[i]= {stimulus: "/static/img/"+cond+"/CSplus1pTheta.png",
+    data: {CS: 3, tt: 7} }
+      }
+      if(tts[i]==8)  { all_trials[i]= {stimulus: "/static/img/"+cond+"/CSplus2nTheta.png",
+    data: {CS: 5, tt: 8} }
+      }
+      if(tts[i]==9) { all_trials[i]= {stimulus: "/static/img/"+cond+"/CSplus2pTheta.png",
+    data: {CS: 7, tt: 9} }
+      }
+  };
+
+ /*********TEST BLOCKs*********/
+  var pressCount = 0;                   
+  var test_block = {
+    timeline:[]
+  };
+  var outcome = [];  
+  var trl_indx=0;
+  var trl_tbreak=38;                    //block length: 38 trials 
+
+  for (var i=0; i < all_trials.length; i++) {         
+    var trial = {
+      type: "single-stim",                      
+   		choices: ["x"],                   
+      stimulus: all_trials[i].stimulus,
+      timing_response: 3000,
+      timing_stim: 3000,
+      response_ends_trial: false,
+      timing_post_trial: 0,   
+
+      prompt: function() {
+        return "<p>Current press count: "+pressCount+"</p>"+
+               "<p>Total remaining: $"+cashLeft.toFixed(2)+"</p>";  
+      },
+      
+      on_finish: function() {
+        jsPsych.data.addDataToLastTrial({trl_indx: trl_indx});  
+        var trial_data=jsPsych.data.getLastTrialData();
+
+        var tt = all_trials[trial_data.trl_indx].data.tt; 
+        var CS = all_trials[trial_data.trl_indx].data.CS;
+        
+        jsPsych.data.addDataToLastTrial({tt: tt, CS: CS});    
+        
+        if(trial_data.rt==-1 && tt==2) {outcome=-1; cashLeft=cashLeft-lossAmount;
+          }
+        else if(trial_data.rt==-1 && tt==4){outcome=-1; cashLeft=cashLeft-lossAmount;
+          }
+        else {
+          outcome=0;
+        }
+        if(trial_data.rt >-1){pressCount++;
+            }
+        trl_indx++;    
+        
+        jsPsych.data.addDataToLastTrial({outcome: outcome, cashLeft: cashLeft, pressCount: pressCount, phase: "task"});
+        psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+        
+        return outcome, cashLeft, pressCount, trl_indx;
+       }
+   	};
+
+    var one_whole_trial ={
+      timeline: [trial, if_node1, if_node2, fixation]       //stitch together stimulus display for one whole trial
+    };
+
+    var one_whole_trial_break ={
+      timeline: [trial, if_node1, if_node2, fixation, test_block_end]       //" for end of block trials
+    }; 
+
+    if (i%trl_tbreak==0 && i!=0)                            //if end of block (length=trl_tbreak) 
+    {
+      test_block.timeline.push(one_whole_trial_break);                                      
+    }
+    else if (i==all_trials.length-1)                        //if end of final block
+    {
+      test_block.timeline.push(one_whole_trial_break);  
+    } 
+    else {
+      test_block.timeline.push(one_whole_trial);
+    }  
+  };
+
+  
+  /************************segway2*****************************/
+  var continue_text2 ={
+    type: "text",
+    text: "<p><strong>Thanks for completing the first part of the study</strong></p>" +
+          //"<p>Your remaining total was $"+cashLeft.toFixed(2)+", which will be added to your payment "+
+          //"at the end of the study as a bonus.</p>" +
+          "<p>Your remaining total will be added to your payment "+
+          "at the end of the study as a bonus.</p>" +
+          
+          "<p>Press <strong>space bar</strong> to continue</p>",
+   cont_key: [32],
+   on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"rat"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      //psiturk.taskdata.set('bonus', cashLeft);      //insecure as var can be edited in console.
+   }
+  };
+
+  /********************************make VAS ratings block *************************************************/
+  var ratings_intro = {
+   type: "text",
+   cont_key: [32],
+   text: "To finish off this part of the experiment, please rate the following shapes according to "+
+         "how likely you thought you were to <strong>lose money</strong> if you saw them (and did nothing). In other "+
+         "words, how likely you thought each shape was a <strong>dangerous</strong> shape. "+ 
+         "<p> Please press <strong>space bar</strong> to continue</p>"
+  };
+  
+  var ratings_stim = [ 
+                    { stimulus: "/static/img/"+cond+"/CSplus1.png", data: {CS: "CSplus1"} },
+                    { stimulus: "/static/img/"+cond+"/CSplus2pTheta.png", data: {CS: "CSplus2pTheta"} },
+                    { stimulus: "/static/img/"+cond+"/CSplus1pTheta.png", data: {CS: "CSplus1pTheta"} },
+                    { stimulus: "/static/img/"+cond+"/CSplus2nTheta.png", data: {CS: "CSplus2nTheta"} },
+                    { stimulus: "/static/img/"+cond+"/CSplus2.png", data: {CS: "CSplus2"} },
+                    { stimulus: "/static/img/"+cond+"/CSminus.png", data: {CS: "CSminus"} },
+                    { stimulus: "/static/img/"+cond+"/CSplus1nTheta.png", data: {CS: "CSplus1nTheta"} }
+                    ];
+  var ratings_trials = jsPsych.randomization.repeat(ratings_stim,1);               
+
+  var ratings_block = {      
+    type: "rating",
+    labels: ["0 (safe)", "100 (dangerous)"],
+    prompt: "<p class='center-content'>Likelihood of being a 'dangerous' shape</p>",
+    show_response: "FIRST_STIMULUS",
+    timing_first_stim: -1,
+    timeline: ratings_trials,
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"rat"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    }
+  };
+
+  /********************************make questionnaires block *************************************************/
+  /***************preamble*********/
+  var questionnaire_intro_text = {
+    type: "text",
+    cont_key: [32],
+    text: "<p>For the last part of the experiment, we would like to complete some questionnaires about " +
+          "attitudes, preferences, mood, and other features of your personality.</p> "+
+          "<p>We ask that you answer all of these questions as openly and honestly as possible. While some of "+
+          "the questions are sensitive in nature, please be aware that your answers are strictly "+
+          "confidential and will never be directly linked to your identity.</p>"+
+          "<p> Please press <strong>space bar</strong> to continue</p>",
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+    }
+  };
+
+  /*********response scales*********/
+  var scale_stai=["Almost Never", "Sometimes", "Often","Almost Always"];
+  var scale_oci=["Not at all", "A little", "Moderately", "A lot","Extremely"];
+  var scale_bis=["Rarely/Never", "Occasionally", "Often", "Almost Always"];
+  var scale_phq9=["Not at all", "Several days", "More than half the days", "Nearly every day"];
+  var scale_ami=["Completely untrue","Mostly untrue","Neither true nor untrue","Quite true","Completely true"];
+
+  var scale_csq=["Strongly Disagree", "Disagree", "Undecided", "Agree", "Strongly Agree"];
+
+  /*********questionnaires**********/
+  var STAI = {
+    type: "survey-likert", //nb have edited jspsych-survery-likert.js to make forced_response:true default
+    preamble: ["<p>A number of statements which people have used to describe themselves "+
+               "are given below. Read each statement and then select the appropriate "+
+               "option to describe how you <strong>generally</strong> feel.</p>"],
+    questions: ["I feel pleasant",
+                "I feel nervous and restless",
+                "I feel satisfied with myself",
+                "I wish I could be as happy as other seem to be",
+                "I feel like a failure",
+                "I feel rested",
+                "I am 'cool, calm and collected'",
+                "I feel that difficulties are piling up so that I cannot overcome them",
+                "I worry too much over something that doesn't really matter",
+                "I am happy",
+                "I have disturbing thoughts",
+                "I lack self-confidence",
+                "I feel secure",
+                "I make decisions easily",
+                "I feel inadequate",
+                "I am content",
+                "Some unimportant thought runs through my mind and bothers me",
+                "I take disappointments so keenly that I can't put them out of my mind",
+                "I am a steady person",
+                "I get in a state of tension or turmoil as I think over my recent concerns and interests"],
+    labels: function() {  //need an array with one scale for every question 
+      var nQuest=20;      //can't use questions.length as not defined as a var...
+      var labels=[]; 
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_stai)
+        }
+      return labels;
+    },
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    },
+    qu_name: ["STAI"]  //nb have edited jspsych-survery-likert to make sure this var is saved in trial_data
+  };
+
+  var OCI= {
+    type: "survey-likert",
+    preamble: ["<p>The following statements refer to experiences that many people have in their "+
+               "everyday lives. For each statement, selection an answer that best describes how "+
+               "much that experience has <strong>distressed</strong> or <strong>bothered</strong> "+
+               "you during the <strong>past month</strong>.</p>"],
+    questions: ["I have saved up so many things that they get in the way",
+                "I check things more often than necessary",
+                "I get upset if things are not arranged properly",
+                "I feel compelled to count while I am doing things",
+                "I find it difficult to touch an object when I know it has been touched "+
+                  "by strangers or certain people",
+                "I find it difficult to control my thoughts",
+                "I collect things I don't need",
+                "I repeatedly check doors, windows, drawers, etc.",
+                "I get upset if others change the way I have arranged things",
+                "I feel I have to repeat certain numbers",
+                "I sometimes shave or wash or clean myself simply because I feel contaminated",
+                "I am upset by unpleasant thoughts that come into my mind against my will",
+                "I avoid throwing things away becuase I am afraid I might need them later",
+                "I repeatedly check gas and water taps and light switches after turning them off",
+                "I need things to be arranged in a particular order",
+                "I feel that there are good and bad numbers",
+                "I wash my hands more often and longer than necessary",
+                "If you are paying attention to these questions, please select 'A little' as your answer",
+                "I frequently get nasty thoughts and have difficults in getting rid of them"],
+    labels: function() {
+      var labels=[];
+      var nQuest=19;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_oci)
+          }
+      return labels; 
+    },
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    },
+    qu_name: ["OCI"]
+  };
+
+  var BIS = {
+    type: "survey-likert",
+    preamble: ["<p>People differ in the ways they act and think in different situations. "+
+               "This is a measure of some of the ways in which you act and think. Read each "+
+               "statement and select the right option for you. Do not spend too much time "+
+               "on any one statement, and try to answer quickly and honestly.</p>"],
+    questions: ["I plan tasks carefully",
+                "I do things without thinking",
+                "I make up my mind quickly",
+                "I am happy-go-lucky",
+                "I don't pay attention",
+                "I have racing thoughts",
+                "I plan trips well ahead of time",
+                "I am self-controlled",
+                "I concentrate easily",
+                "I save regularly",
+                "I squirm during plays or lectures",
+                "I am a careful thinker",
+                "I plan for job security",
+                "I say things without thinking",
+                "I like to think about complex problems",
+                "I change jobs",
+                "I act on impulse",
+                "I get easily bored when solving thought problems",
+                "I act on the spur of the moment",
+                "I am a steady thinker",
+                "I change residences",
+                "I buy things on impulse",
+                "I can only think about one thing at a time",
+                "I change hobbies",
+                "I spend more than I earn",
+                "I often have extraneous or intrusive thoughts when trying to think",
+                "I am more interested in the present than the future",
+                "I am restless at the theatre or in lectures",
+                "I like puzzles",
+                "I am future-oriented"],
+    labels: function() {
+      var labels=[];
+      var nQuest=30;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_bis)
+          }
+      return labels;
+    },
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    },
+    qu_name: ["BIS"]
+  };
+
+  var AMI = {
+    type: "survey-likert",
+    preamble: ["<p>Below are a number of statements. Each statement asks you to think about "+
+               "your life <strong>over the last 2 weeks</strong>.</p>"+
+               "For each statement, select how appropriately it describes your life "+
+               "over the last two weeks.</p>"],
+    questions: ["I feel sad or upset when I hear bad news",
+                "I start conversation with random people",
+                "I enjoy doing things with people I have just met",
+                "I suggest activities for me and my friends to do",
+                "I make decisions firmly and without hesitation",
+                "After making a decision, I will wonder if I have made the wrong choice",
+                "Based on the last two weeks, I would say I care deeply about how my loved "+
+                  "ones think of me",
+                "I go out with friends on a weekly basis",
+                "When I decide to do something, I am able to make an effort easily",
+                "I don't like to laze around",
+                "I get things done when they need to be done, without requiring "+
+                  "reminders from others",
+                "When I decide to do something, I am motivated to see it through to "+
+                  "the end",
+                "I feel awful if I say something insensitive",
+                "I start conversations without being prompted",
+                "When I have somthing I need to do, I do it straight away so it is "+
+                  "out of the way",
+                "I feel bad when I hear an acquaintance has had an accident or illness",
+                "I enjoy choosing what to do from a range of activities",
+                "If i realise I have been unpleasant to someone, I will feel "+
+                  "terribly guilty afterwards"],
+    labels: function() {
+      var labels=[];
+      var nQuest=18;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_ami)
+          }
+      return labels;
+    },
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    },
+    qu_name: ["AMI"]
+  };
+
+  var PHQ9= {
+    type: "survey-likert",
+    preamble: ["<p>Over the last <strong>two weeks</strong>, how often have you been bothered by any of "+
+               "the following problems?<p>"],
+    questions: ["Little interest or pleasure in doing things",
+                "Feeling down, depressed, or hopeless",
+                "Trouble falling or staying asleep, or sleeping too much",
+                "Feeling tired or having little energy",
+                "Poor appetite, or over-eating",
+                "Feeling bad about yourself - or that you are a failure or have let yourself "+
+                  "or your family down",
+                "Trouble concentrating on things, such as reading the newspaper or watching "+
+                  "television",
+                "Moving or speaking so slowly that other people could have noticed. Or the "+
+                  "opposite - being so fidgety or restless that you have been moving around "+
+                  "a lot more than usual"],
+    labels: function() {
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_phq9)
+          }
+      return labels;
+    },
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase:"quest"});
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+      psiturk.saveData();
+    },
+    qu_name: ["PHQ9"]
+  };
+
+
+  var CSQ_intro = {
+    type: "text",
+    text: "<p><strong>Now for the last set of questions</strong></p>"+
+          "<p>Please try to vividly imagine yourself in each of the situations that follow.</p>"+
+          "<p>Picture each situation as clearly as you can - as if the events were happening to "+
+          "you right now. Place yourself in each situation and decide what you feel would have "+
+          "<strong>caused</strong> that situation if it actually happened to <strong>you</strong>.</p>"+
+          "<p>Although events may have many causes, we want you to choose only one, the thing "+
+          "you feel would be the major cause of the situation if it actually happened to you.</p>"+
+          "<p>It is important to remember that <strong>there are no right or wrong answers</strong>. "+
+          "The important thing is to answer the questions in a way that corresponds to what "+
+          "<strong>you</strong> would think and feel if the situations occurred in your life.</p>"+
+          
+          "<p>Press <strong>space bar</strong> to continue</p>",
+   cont_key: [32]
+  };
+  var CSQ1 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine you are getting along badly with your parents</strong>.</p>"+
+               "<p>Think carefully about the reason for you getting along badly with your parents, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["Getting on badly with my parents is the fault of other people or the circumstances",
+                "The reason I get on badly with my parents causes problems for me in all areas of my life",
+                "My parents and I will start afresh in the future and forget about the reason for "+
+                   "getting along badly",
+                "Getting along badly with my parents means that there is something wrong with me as a person",
+                "It is my fault I am getting along badly with my parents",
+                "The reason am I geting along badly with my parents does not stop me from enjoying other things",
+                "The reason for getting on badly with my parents now will stop me from getting on well with "+
+                   "them in the future",
+                "Getting along badly with my parents does not say anything about me as a person"],
+    labels: function() {
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ1"]
+  };
+  var CSQ2 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine your class reacts negatively to an important talk you have to "+
+               "give as part of your coursework</strong>.</p>"+
+               "<p>Think carefully about the reason you think this has happened, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["The negative reaction to my talk is the fault of other people or the circumstances",
+                "The reason I did badly on my talk causes problems for me in all areas of my life",
+                "I will start afresh in the future and forget about the reason for the talk going badly",
+                "Doing badly on this talk means that there is something wrong with me as a person",
+                "It is my fault the class reacted negatively to my talk",
+                "The reason that the talk went badly does not stop me from enjoying other things",
+                "The reason that the talk went badly will stop me from getting doing well in similar "+
+                  "situations in the future",
+                "Getting a negative reaction to my talk does not say anything about me as a person"],
+    labels: function() {
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ2"]
+  };
+  var CSQ3 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine that during the first year of working in the career of your choice, "+
+               "you receive a negative evaluation of your job performance</strong>.</p>"+
+               "<p>Think carefully about the reason you think this has happened, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["The negative evaluation is due to other people or circumstances",
+                "The reason I did badly in my evaluation causes problems for me in all areas of my life",
+                "I will start afresh in the future and forget about the reason for my evaluation being negative",
+                "Doing badly on this evaluation means that there is something wrong with me as a person",
+		            "It is my fault that I got a negative performance evaluation",
+                "The reason that this evaluation went badly will not stop me from enjoying other things",
+                "The reason that the evaluation went badly will stop me from getting doing well in similar "+
+                   "situations in the future",
+                "Getting a negative evaluation of my job performance does not say anything about me as a person"],
+    labels: function() {
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ3"]
+  };
+  var CSQ4 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine you go to a party and people are not interested in you</strong>.</p>"+
+               "<p>Think carefully about the reason you think this has happened, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["People not being interested in me is the fault of other people",
+                "The reason no one was interested in me causes me problems in all areas of my life",
+                "I will start afresh in the future and forget about the reason people were not interested in me",
+                "People not being interested me at the party means that there is something wrong with me "+
+                  "as a person",
+                "It is my fault that people are not interested in me",
+                "The reason why I think that people did not seem interested in me will not stop me from "+
+                  "enjoying other things",
+                "The reason that the people didn't seem interested in me at this party will not prevent "+
+                  "me from enjoying situations in the future",
+                "That people were not interested in me at the party does not say anything about me as a person"],
+    labels: function(){
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ4"]
+  };
+  var CSQ5 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine you really want to be in an intimate, romantic relationship, but you "+
+               "are not</strong>.</p>"+
+               "<p>Think carefully about the most likely reason for this, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["Not being in a relationship is the fault of other people or my current circumstances",
+                "The same reason causing me not to be in a relationship causes me problems in all areas "+
+                  "of my life",
+                "I will try to start afresh in the future and forget about the reason I think I'm not "+
+                "in a relationship at the moment",
+                "That I am not in a romantic relationship means that there is something wrong with me "+
+                  "as a person",
+                "It is my fault that I am not in a romantic relationship",
+                "The reason why I think that I'm not in a relationship will not stop me from enjoying "+
+                  "other things",
+                "The reason that I'm not in a relationship now will not prevent me from being in a "+
+                  "relationship in the future",
+                "That I'm not in a romantic relationship now doesn't say anything about me as a person"],
+    labels: function(){ 
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ5"]
+  };
+  var CSQ6 = {
+    type: "survey-likert",
+    preamble: ["<p><strong>Imagine that you are taking an important class, but you cannot complete "+
+               "all the work that your teacher expects of you</strong>.</p>"+
+               "<p>Think carefully about the most likely reason for this, "+
+               "then select the best option for each statement below.</p>"],
+    questions: ["Not being able to complete my work is due to circumstances beyond my control",
+                "The same reason causing me to not complete my work causes me problems in all areas of my life",
+                "I will try to start afresh in the future and forget about the reason I think I can't "+
+                  "complete my work at the moment",
+                "That I am not able to complete the work means that there is something wrong with me as a person",
+                "It is my fault that I can't complete all the work expected of me",
+                "The reason why I think that I can't get my work done will not stop me from enjoying other things",
+                "The reason that I can't get my work done now will not prevent me from being able to get "+
+                  "everything done in the future",
+                "That I'm not able to get all my work done at the moment doesn't say anything about me as "+
+                  "a person"],
+    labels: function() {
+      var labels=[];
+      var nQuest=8;
+      for (i=0; i<nQuest; i++) {
+          labels.push(scale_csq)
+          }
+      return labels; 
+    },
+    qu_name: ["CSQ6"]
+  };
+	
+  /**** concat and randomise order ***/
+  var quests=[STAI, OCI, BIS, PHQ9, AMI]; var quests_r=jsPsych.randomization.shuffle(quests); var tl=[];
+  var questionnaire_block = {
+      timeline: tl.concat(quests_r[0],quests_r[1],quests_r[2],quests_r[3],quests_r[4])
+  };
+  
+  var csqs=[CSQ1, CSQ2, CSQ3, CSQ4, CSQ5, CSQ6]; var csqs_r=jsPsych.randomization.shuffle(csqs); var tl2=[];
+  var CSQ_all = { //put CSQ last to avoid possible mood-induction effects on other scales
+      timeline: tl2.concat(CSQ_intro,csqs_r[0],csqs_r[1],csqs_r[2],csqs_r[3],csqs_r[4],csqs_r[5]),
+      on_finish: function() {
+        jsPsych.data.addDataToLastTrial({phase:"quest"});
+        psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+        psiturk.saveData();
+    }
+  };
+  
+
+ /**************************************make debrief block *************************************************/
+
+ var debrief_block = {
+    type: "survey-multi-choice",
+    preamble: [
+          "<p>Thank you for your participation in our study!  Your anonymous data makes an "+
+          "important contribution to our understanding of human emotion and cognition.</p>" +
+
+          "<p>The purpose of this study was to look at how people apply information they have learned "+
+          "about particular objects or situations (in this case, the coloured shapes you saw) to new "+
+          "objects or situations that look similar to the previous instance, but that may have different "+
+          "consequences. This is because there is evidence that for some people, over-applying information "+
+          "about experiences associated with specific situations to new, similar-seeming situations might "+
+          "be linked to a tendency to experience psychological symptoms such as feeling anxious. "+
+          "We therefore asked you to complete a variety of questionnaires asking about different psychological "+
+          "styles, in order to see if such an association exists in this context.</p>"+
+    
+          "<p>If you have any further questions about this research, you may contact the principal investigator, "+
+          "Dr Agnes Norbury, at aen31@cam.ac.uk.</p>"+
+
+          "<p>If, during the course of filling out some of the study questions you have become upset or "+
+          "concerned about your mental wellbeing, you should arrange a timely appointment with your physician, "+
+          "clinical psychologist or psychiatrist. If you are having suicidal thoughts please visit a hospital "+
+          "emergency room or urgent care center, or contact the National Suicide Prevention Lifeline "+
+          "(1800-273-8255). Further information and links to mental health resources outside of the US "+
+          "can be found at www.centreforglobalmentalhealth.org/global-mental-health-websites.</p>"+
+
+          "Finally, please let us know if you agree to the following statement: "
+          ],
+    questions: [ "I feel that I have been adequately debriefed about the nature of the study. The "+
+                 "investigator has explained the purposes of the research to me, and I feel that any questions "+
+                 "I may have had were satisfactorily answered."],
+    options: [["Yes, I agree.","No, please withhold my data. I will contact the experimenter with questions."]],
+    required: true,
+    on_finish: function() {
+      jsPsych.data.addDataToLastTrial({phase: "debrief" });
+      psiturk.recordTrialData(jsPsych.data.getLastTrialData()); 
+    }
+  };
+
+ 
+ /*******************************************create experiment timeline *************************************/
+  var experiment =[];
+    experiment.push(demogs1); experiment.push(demogs2);
+
+    experiment.push(instructions_block);      
+    experiment.push(instructions_test_block);
+    experiment.push(instr_if_node); //executes instructions and instructions test again if accuracy below threshold
+    experiment.push(instr_if_node); //
+
+    experiment.push(continue_text);
+    experiment.push(test_block);      
+    experiment.push(continue_text2); 
+
+    experiment.push(ratings_intro);
+    experiment.push(ratings_block);
+
+    experiment.push(questionnaire_intro_text);
+    experiment.push(questionnaire_block); 
+    experiment.push(CSQ_all);
+
+    experiment.push(debrief_block); 
+      
+ /********************************************start the experiment*****************************************/
+   //to preload task images:
+   var images = ["/static/img/"+cond+"/CSminus.png", "/static/img/"+cond+"/CSplus1.png", "/static/img/"+cond+"/CSplus2.png", "/static/img/"+cond+"/CSplus1nTheta.png", "/static/img/"+cond+"/CSplus1pTheta.png", "/static/img/"+cond+"/CSplus2nTheta.png", "/static/img/"+cond+"/CSplus2pTheta.png", "/static/img/fix.png", "/static/img/noLoss.png", "/static/img/loseDime.png", "/static/img/instr_loseDime.png", "/static/img/instr_noLossr.png", "/static/img/instr_pressX.png", "/static/img/instr1.png", "/static/img/instr2.png", "/static/img/instr3.png", "/static/img/spiky.png", "/static/img/notSpiky.png" ];
+   jsPsych.pluginAPI.preloadImages(images, function(){ startExperiment(); }, function(nLoaded) { updateLoadedCount(nLoaded); });
+
+   function updateLoadedCount(nLoaded){
+    var percentcomplete = nLoaded / images.length * 100;
+    console.log('Loaded '+percentcomplete+'% of images');
+   }
+
+   prompt_resubmit = function() {
+      replaceBody(error_message);
+      $("#resubmit").click(resubmit);
+   };
+   resubmit = function() {
+      replaceBody("<h1>Trying to resubmit...</h1>");
+      reprompt = setTimeout(prompt_resubmit, 8000);
+      psiTurk.saveData({
+        success: function() {
+          clearInterval(reprompt); 
+                psiturk.computeBonus('compute_bonus', function(){finish()}); 
+        }, 
+        error: prompt_resubmit
+      });
+   };
+
+   function startExperiment() {
+     jsPsych.init({
+      display_element: $('#jspsych-target'),
+      fullscreen: true,                                  //TRUE FOR REAL EXP
+      timeline: experiment,
+      experiment_structure: experiment, 
+      //on_data_update: function() {
+                  //console.log(JSON.stringify(jsPsych.data.getLastTrialData()));    //DB ONLY [doesn't display all data]
+              //},
+      on_finish: function() {
+                  psiturk.computeBonus('compute_bonus');  //more secure root than calculating client-side
+                  setTimeout(psiturk.saveData({           //sends data via server, then completes HIT
+                      success: function() { 
+                                    psiturk.completeHIT(); //don't wrap computeBonus as tooYoung won't have -->
+                                    }        
+                      //error: prompt_resubmit
+                      }), 6000)                            //add wait to allow compute_bonus to finish exec
+              }
+        });
+    }
+
+    </script>
+
+</html>

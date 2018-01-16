@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- 
+  The consent.html displays the text of your IRB-approved
+  consent form.  Even if you are not required to provide
+  a consent form, it is helpful to use this form to 
+  describe what people can do if an error comes up, etc...
+
+-->
+<html>
+    <head>
+        <title>Psychology Experiment - Informed Consent Form</title>
+        <link rel=stylesheet href="/static/css/bootstrap.min.css" type="text/css">
+        <link rel=stylesheet href="/static/css/style.css" type="text/css">
+        <script type="text/javascript">
+            function onexit() {
+              self.close(); // no harm, no foul here
+            }
+        </script>
+    </head>
+    <body>
+        <div id="container-consent">
+            <div id="consent">
+                <h1>We need your consent to proceed</h1>
+                <hr>
+                <div class="legal well">
+                    <p>
+                    <p>You have been invited to take part in a research study to learn more about human emotion and cognition.  This study is being conducted by Dr Agnes Norbury, Research Associate at the Computational and Biological Learning Laboratory, University of Cambridge.</p>
+
+                    <p>If you agree to take part in this study, you will be asked to complete the following tasks: </p>
+                    <p>1)  View and respond to simple visual stimuli (coloured shapes) on your computer screen</p>
+                    <p>2)  Complete some questionnaires related to sensitive topics, including mental health</p>
+                    <p>3)  Provide some general information about yourself: specifically your age and gender identity.</p>
+
+                    <p>There are no known risks associated with your participation in this research. If you become upset 
+                    while completing the questionnaires, which cover some sensitive topics, you should take one of the
+                    following actions: (1) arrange a timely appointment with your physician, clinical psychologist or
+                    psychiatrist, or if you are having suicidal thoughts (2) visit a hospital emergency room or urgent care
+                    center or (3) please contact the National Suicide Prevention Lifeline (1800-273-8255). Further 
+                    information and links to mental health resources outside of the US can be found 
+                    at centreforglobalmentalhealth.org/global-mental-health-websites.</p>
+
+                    <p>You will receive a $2.50 flat fee for participating, plus you will receive additional compensation 
+                    depending on the responses you make during the first section of the study  - up to around $2.50 extra, depending on how well you do. Participation in this study is voluntary. You may refuse to participate or withdraw at any time without penalty.</p> 
+
+                    <p>If there is anything about the study or your participation that is unclear or that you do not
+                    understand, if you have questions, or wish to report a research-related problem, you may contact Dr
+                    Agnes Norbury, aen31@cam.ac.uk, Computational and Biological Learning Laboratory, University of
+                    Cambridge Dept of Engineering, Trumpington Street, Cambridge CB2 1PZ, UK.</p>
+
+                    <p>Further information about your rights as a research participant can be found at
+                    www.research-integrity.admin.cam.ac.uk/research-ethics.</p>
+           
+                    <p>Any specific information gathered in the study will be disclosed only to the investigator or
+                    collaborators.  If the results are published, the information remains anonymous and disguised so
+                    that no personal identification can be made.</p>
+      
+                    <button type="button" class="btn btn-default btn-sm" onClick="window.print();">
+                    <span class="glyphicon glyphicon-print"></span> Print a copy of this
+                    </button>
+                </div>
+
+                <hr>
+                <h4>Do you understand and consent to the terms of the experiment explained above?</h4>
+                <br>
+
+                <center>
+                    <button type="button" class="btn btn-primary btn-lg" onClick="window.location='/exp?hitId={{ hitid }}&assignmentId={{ assignmentid }}&workerId={{ workerid }}'">
+                    <span class="glyphicon glyphicon-ok"></span> Yes, I agree 
+                    </button>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <button type="button" class="btn btn-danger btn-lg" onClick="onexit()">
+                    <span class="glyphicon glyphicon-ban-circle"></span> No thanks
+                    </button>
+                </center>
+
+            </div>
+        </div>
+    </body>
+</html>
+

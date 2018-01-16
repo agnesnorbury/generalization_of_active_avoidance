@@ -1,0 +1,39 @@
+[HIT Configuration]
+title = Psychology Experiment
+description = Play a game and answer questions about your emotions and personality. Takes around 45 minutes.
+amt_keywords = Psychology, Experiment, Game
+lifetime = 24 ;might want to increase for live
+us_only = true
+approve_requirement = 95
+contact_email_on_error = aen31@cam.ac.uk
+ad_group = instr_av_gen
+psiturk_keywords = avoidance
+organization_name = University of Cambridge
+browser_exclude_rule = MSIE, mobile, tablet, bot
+
+[Database Parameters]
+;database_url = sqlite:///instr_av_gen.db
+database_url = mysql://username:password@IP:portno/instr_av_gen
+;database_url = mysql://mturk@localhost/mturk?unix_socket=/Applications/MAMP/tmp/mysql/mysql.sock
+table_name = test
+
+[Server Parameters]
+host = 0.0.0.0
+;127.0.0.1 for local db and 0.0.0.0 for live / sandbox db
+port = 22362
+cutoff_time = 120
+logfile = server.log
+loglevel = 2
+debug = false; for live
+login_username = na ;only if want to username and pw protect ad server access
+login_pw = na
+threads = auto
+
+[Task Parameters]
+experiment_code_version = 1.0 ;keep all these the same for each experiment
+num_conds = 1
+num_counters = 1
+
+[Shell Parameters]
+launch_in_sandbox_mode = true ;false for live
+use_psiturk_ad_server = true ;keep true
